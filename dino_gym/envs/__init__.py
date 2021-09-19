@@ -1,0 +1,1 @@
+from dino_gym.envs.dino_env import DinoEnv
