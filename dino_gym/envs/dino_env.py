@@ -7,6 +7,8 @@ from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 # Simulates holding down the key
 from selenium.webdriver.common.action_chains import ActionChains
+from selenium.common.exceptions import TimeoutException
+
 import time
 
 from PIL import Image
@@ -54,10 +56,8 @@ class DinoEnv(gym.Env):
         # We have a discrete action space of 3.
         self.action_space = spaces.Discrete(3)
 
-        self.state = deque(maxlen = NUM_SCREENSHOTS)
-
         # Buffer to store the observation.
-        # We will capture 4 screenshots of screen_height, screen_width.
+        # Grayscale screenshot of screen_height, screen_width.
         self.observation_space = spaces.Box(
             low=0,
             high=255,
@@ -86,17 +86,7 @@ class DinoEnv(gym.Env):
 
         # Add back the rgb channel
         gray = np.expand_dims(gray, axis=2)
-        self.state.append(gray)
-
         return gray
-
-        # if len(self.state) < NUM_SCREENSHOTS:
-        #     stacked_images = np.concatenate([self.state[0],self.state[0],self.state[0],self.state[0]])
-        #     return stacked_images
-        # else:
-        #     stacked_images = np.concatenate(self.state)
-        #     # cv2.imwrite('stacked_test.png', stacked_images)
-        #     return stacked_images
 
     def _is_game_stopped(self):
         return not self._driver.execute_script("return Runner.instance_.playing")
@@ -126,12 +116,21 @@ class DinoEnv(gym.Env):
         time.sleep(.015)
         return observation, reward, done, info
 
-    def reset(self):
+    def _get_canvas_with_retries(self, num_retries=5):
         self._driver.get(DINO_URL)
+        retries = 0
+        while retries < num_retries:
+            try:
+                WebDriverWait(self._driver, 10).until(
+                    EC.presence_of_element_located((By.CLASS_NAME, "runner-canvas"))
+                )
+                break
+            except TimeoutException:
+                self._driver.refresh()
+                retries += 1
 
-        WebDriverWait(self._driver, 10).until(
-            EC.presence_of_element_located((By.CLASS_NAME, "runner-canvas"))
-        )
+    def reset(self):
+        self._get_canvas_with_retries()
         
         body = self._driver.find_element_by_tag_name("body")
         body.send_keys(Keys.SPACE)
@@ -152,8 +151,8 @@ class DinoEnv(gym.Env):
 # from stable_baselines3.common.env_checker import check_env
 
 # env = DinoEnv()
-# # print(env.observation_space.shape)
-# # check_env(env)
+# print(env.observation_space.shape)
+# check_env(env)
 
 # from stable_baselines3 import A2C
 # from stable_baselines3.common.evaluation import evaluate_policy
