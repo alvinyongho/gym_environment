@@ -10,6 +10,7 @@ from selenium.webdriver.common.action_chains import ActionChains
 from selenium.common.exceptions import TimeoutException
 
 import time
+import matplotlib.pyplot as plt
 
 from PIL import Image
 
@@ -27,9 +28,6 @@ import cv2
 # Manage the state
 from collections import deque
 
-# Debug
-from matplotlib.pyplot import imshow
-
 SCREEN_WIDTH = 600
 SCREEN_HEIGHT = 150
 
@@ -40,7 +38,7 @@ NUM_SCREENSHOTS = 4
 
 class DinoEnv(gym.Env):
     """Dino env that follows the gym interfaces."""
-    metadata = {'render.modes': ['human']}
+    metadata = {'render.modes': ['human', 'rgb_array']}
 
     def __init__(self, screen_width=SCREEN_WIDTH, screen_height=SCREEN_HEIGHT):
         super(DinoEnv, self).__init__()
@@ -140,7 +138,14 @@ class DinoEnv(gym.Env):
         return observation
     
     def render(self, mode='human'):
-        pass
+        grayscale_image = self._get_observation()
+        
+        if mode == 'human':
+            plt.imshow(grayscale_image)
+            plt.axis('off')
+
+        elif mode == 'rgb_array':
+            return self._screenshot()
     
     def close(self):
         pass
@@ -151,8 +156,18 @@ class DinoEnv(gym.Env):
 # from stable_baselines3.common.env_checker import check_env
 
 # env = DinoEnv()
-# print(env.observation_space.shape)
 # check_env(env)
+
+#### Checking render ####
+# obs = env.reset()
+# for i in range(1000):
+#     action = env.action_space.sample()
+#     obs, reward, done, info = env.step(action)
+#     env.render()
+#     plt.show()
+#     time.sleep(0.01)
+
+
 
 # from stable_baselines3 import A2C
 # from stable_baselines3.common.evaluation import evaluate_policy
