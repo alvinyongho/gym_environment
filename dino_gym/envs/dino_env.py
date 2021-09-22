@@ -9,7 +9,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.common.exceptions import TimeoutException
 
-import time
+import json, time
 import matplotlib.pyplot as plt
 
 from PIL import Image
@@ -25,15 +25,51 @@ from PIL import Image
 import base64
 import cv2
 
-# Manage the state
-from collections import deque
-
 SCREEN_WIDTH = 600
 SCREEN_HEIGHT = 150
 
-DINO_URL = 'https://chromedino.com/'
+DINO_URL = 'chrome://dino'
 
-NUM_SCREENSHOTS = 4
+def dispatchKeyEvent(driver, name, options = {}):
+  options["type"] = name
+  body = json.dumps({'cmd': 'Input.dispatchKeyEvent', 'params': options})
+  resource = "/session/%s/chromium/send_command" % driver.session_id
+  url = driver.command_executor._url + resource
+  driver.command_executor._request('POST', url, body)
+
+keys = {
+  'ArrowUp': 38,
+  'ArrowRight': 39,
+  'ArrowDown': 40,
+}
+
+keyboard_options = [{
+        "code": "ArrowRight", #event.code
+        "key": "ArrowRight",    #event.key
+        "nativeVirtualKeyCode": keys['ArrowRight'],
+        "windowsVirtualKeyCode": keys['ArrowRight'],
+    },{
+        "code": "ArrowUp",
+		"key": "ArrowUp",
+		"nativeVirtualKeyCode": keys['ArrowUp'],
+		"windowsVirtualKeyCode": keys['ArrowUp']
+    },{
+        "code": "ArrowDown",
+        "key": "ArrowDown",
+        "nativeVirtualKeyCode": keys['ArrowDown'],
+        "windowsVirtualKeyCode": keys['ArrowDown']
+}]
+
+
+def key_down_with_options(driver, options):
+    dispatchKeyEvent(driver, "rawKeyDown", options)
+    dispatchKeyEvent(driver, "char", options)
+    options["autoRepeat"] = True
+
+
+def key_up_with_options(driver, options):
+    dispatchKeyEvent(driver, "keyUp", options)
+
 
 
 class DinoEnv(gym.Env):
@@ -44,7 +80,7 @@ class DinoEnv(gym.Env):
         super(DinoEnv, self).__init__()
 
         chrome_options = webdriver.ChromeOptions()
-        chrome_options.add_argument("--headless")
+        # chrome_options.add_argument("--headless")
         chrome_options.add_argument("--mute-audio")
         self._driver = webdriver.Chrome(options = chrome_options)
 
@@ -97,14 +133,21 @@ class DinoEnv(gym.Env):
         return int(self._driver.execute_script("return Runner.instance_.distanceRan || 0"))
     
     def step(self, action):
-        actions_map = [
-            Keys.ARROW_RIGHT, # do nothing
-            Keys.ARROW_UP, # jump
-            Keys.ARROW_DOWN # duck
-        ]
-
-        self._driver.find_element_by_tag_name("body") \
-            .send_keys(actions_map[action])
+        #Nothing
+        if action == 0:
+            key_up_with_options(self._driver, keyboard_options[1])
+            key_up_with_options(self._driver, keyboard_options[2])
+            key_down_with_options(self._driver, keyboard_options[0])
+        #Jump
+        elif action == 1:
+            key_up_with_options(self._driver, keyboard_options[0])
+            key_up_with_options(self._driver, keyboard_options[2])
+            key_down_with_options(self._driver, keyboard_options[1])
+        #Duck
+        else:
+            key_up_with_options(self._driver, keyboard_options[0])
+            key_up_with_options(self._driver, keyboard_options[1])
+            key_down_with_options(self._driver, keyboard_options[2])
 
         observation = self._get_observation()
         done = self._is_game_over()
@@ -115,7 +158,12 @@ class DinoEnv(gym.Env):
         return observation, reward, done, info
 
     def _get_canvas_with_retries(self, num_retries=5):
-        self._driver.get(DINO_URL)
+        try:
+            self._driver.get(DINO_URL)
+        except:
+            # Should not fail, we're loading an offline page which causes it to except.
+            pass
+
         retries = 0
         while retries < num_retries:
             try:
@@ -151,21 +199,20 @@ class DinoEnv(gym.Env):
         pass
 
 
-
 #################################################################
-# from stable_baselines3.common.env_checker import check_env
+from stable_baselines3.common.env_checker import check_env
 
-# env = DinoEnv()
+env = DinoEnv()
 # check_env(env)
 
 #### Checking render ####
-# obs = env.reset()
-# for i in range(1000):
-#     action = env.action_space.sample()
-#     obs, reward, done, info = env.step(action)
-#     env.render()
-#     plt.show()
-#     time.sleep(0.01)
+obs = env.reset()
+for i in range(1000):
+    action = env.action_space.sample()
+    obs, reward, done, info = env.step(action)
+    if i==500:
+        env.reset()
+    time.sleep(0.01)
 
 
 
