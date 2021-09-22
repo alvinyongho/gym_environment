@@ -200,19 +200,19 @@ class DinoEnv(gym.Env):
 
 
 #################################################################
-from stable_baselines3.common.env_checker import check_env
+# from stable_baselines3.common.env_checker import check_env
 
-env = DinoEnv()
-# check_env(env)
+# env = DinoEnv()
+# # check_env(env)
 
-#### Checking render ####
-obs = env.reset()
-for i in range(1000):
-    action = env.action_space.sample()
-    obs, reward, done, info = env.step(action)
-    if i==500:
-        env.reset()
-    time.sleep(0.01)
+# #### Checking render ####
+# obs = env.reset()
+# for i in range(1000):
+#     action = env.action_space.sample()
+#     obs, reward, done, info = env.step(action)
+#     if i==500:
+#         env.reset()
+#     time.sleep(0.01)
 
 
 
