@@ -80,7 +80,7 @@ class DinoEnv(gym.Env):
         super(DinoEnv, self).__init__()
 
         chrome_options = webdriver.ChromeOptions()
-        # chrome_options.add_argument("--headless")
+        chrome_options.add_argument("--headless")
         chrome_options.add_argument("--mute-audio")
         self._driver = webdriver.Chrome(options = chrome_options)
 
