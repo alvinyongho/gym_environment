@@ -80,7 +80,7 @@ class DinoEnv(gym.Env):
         super(DinoEnv, self).__init__()
 
         chrome_options = webdriver.ChromeOptions()
-        chrome_options.add_argument("--headless")
+        # chrome_options.add_argument("--headless")
         chrome_options.add_argument("--mute-audio")
         self._driver = webdriver.Chrome(options = chrome_options)
 
@@ -158,14 +158,15 @@ class DinoEnv(gym.Env):
         return observation, reward, done, info
 
     def _get_canvas_with_retries(self, num_retries=5):
-        try:
-            self._driver.get(DINO_URL)
-        except:
-            # Should not fail, we're loading an offline page which causes it to except.
-            pass
-
         retries = 0
         while retries < num_retries:
+            try:
+                self._driver.get(DINO_URL)
+            except:
+                # Should not fail, we're loading an offline page which causes it to except.
+                pass
+
+
             try:
                 WebDriverWait(self._driver, 10).until(
                     EC.presence_of_element_located((By.CLASS_NAME, "runner-canvas"))
